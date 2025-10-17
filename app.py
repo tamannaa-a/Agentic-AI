@@ -1,117 +1,133 @@
 import streamlit as st
 import pdfplumber
-from sentence_transformers import SentenceTransformer
-import faiss
-import numpy as np
-import re
-from io import BytesIO
 from PIL import Image
+import numpy as np
+import faiss
+from sentence_transformers import SentenceTransformer
+import pytesseract
+import io
+import base64
 
-# -------------------------------
-# App Title and Description
-# -------------------------------
-st.set_page_config(page_title="Agentic AI - Document Classifier", page_icon="🤖", layout="wide")
+# -----------------------------
+# PAGE CONFIG
+# -----------------------------
+st.set_page_config(page_title="Document Classifier AI", page_icon="📄", layout="centered")
 
+# Custom CSS for styling
 st.markdown("""
-    <h1 style='text-align:center;color:#2F80ED;'>🤖 Agentic AI - Smart Document Classifier</h1>
-    <p style='text-align:center;color:gray;'>Upload any insurance document (invoice, claim form, inspection report) and let AI auto-classify it!</p>
+    <style>
+        .reportview-container {
+            background: linear-gradient(180deg, #f9f9f9, #e3f2fd);
+        }
+        .stButton>button {
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 10px;
+            height: 3em;
+            width: 100%;
+            font-size: 1em;
+        }
+        .stProgress > div > div {
+            background-color: #2196F3;
+        }
+    </style>
 """, unsafe_allow_html=True)
 
-# -------------------------------
-# Load Embedding Model
-# -------------------------------
+# -----------------------------
+# MODEL LOAD
+# -----------------------------
 @st.cache_resource
 def load_model():
-    return SentenceTransformer('all-MiniLM-L6-v2')
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    return model
 
 model = load_model()
 
-# -------------------------------
-# Predefined Categories
-# -------------------------------
-categories = {
-    "Invoice": ["invoice", "amount due", "total payable", "bill no", "payment terms"],
-    "Claim Form": ["claim number", "policy holder", "insurance claim", "incident", "policy no"],
-    "Inspection Report": ["vehicle inspection", "report", "assessment", "damages", "inspector"],
-}
+# -----------------------------
+# DOCUMENT TYPES
+# -----------------------------
+doc_types = [
+    "Claim Form",
+    "Inspection Report",
+    "Invoice",
+    "Policy Document",
+    "Other"
+]
+doc_embeddings = model.encode(doc_types)
 
-# -------------------------------
-# Utility Functions
-# -------------------------------
-def extract_text_from_pdf(file):
-    text = ""
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages:
-            text += page.extract_text() or ""
-    return text
+index = faiss.IndexFlatL2(doc_embeddings.shape[1])
+index.add(np.array(doc_embeddings))
 
-def classify_document(text):
-    # Convert category samples to embeddings
-    category_names = list(categories.keys())
-    sample_sentences = [" ".join(categories[c]) for c in category_names]
-    sample_embeddings = model.encode(sample_sentences, convert_to_numpy=True)
-    query_embedding = model.encode([text], convert_to_numpy=True)
+# -----------------------------
+# UPLOAD SECTION
+# -----------------------------
+st.title("📄 Smart Document Classification AI")
+st.markdown("### Upload your document — the AI will identify what type it is!")
 
-    # Use FAISS for similarity
-    index = faiss.IndexFlatL2(sample_embeddings.shape[1])
-    index.add(sample_embeddings)
-    distances, indices = index.search(query_embedding, 1)
-    return category_names[indices[0][0]], distances[0][0]
+uploaded_file = st.file_uploader("Upload a PDF or Image file", type=["pdf", "png", "jpg", "jpeg"])
 
-def extract_fields(text):
-    fields = {}
-    date_match = re.search(r"\b\d{2,4}[/-]\d{2}[/-]\d{2,4}\b", text)
-    amount_match = re.search(r"[\$₹]\s?\d+[,.]?\d*", text)
-    name_match = re.search(r"(?i)(?:Name|Customer|Client)[:\-]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)", text)
+# -----------------------------
+# FUNCTION: Extract Text
+# -----------------------------
+def extract_text(file):
+    if file.name.endswith(".pdf"):
+        with pdfplumber.open(file) as pdf:
+            text = " ".join([page.extract_text() or "" for page in pdf.pages])
+    else:
+        img = Image.open(file)
+        text = pytesseract.image_to_string(img)
+    return text.strip()
 
-    fields["Date"] = date_match.group(0) if date_match else "Not found"
-    fields["Amount"] = amount_match.group(0) if amount_match else "Not found"
-    fields["Name"] = name_match.group(1) if name_match else "Not found"
-    return fields
+# -----------------------------
+# PROCESS BUTTON
+# -----------------------------
+if uploaded_file is not None:
+    st.info("File uploaded successfully!")
 
-# -------------------------------
-# Upload Section
-# -------------------------------
-uploaded_file = st.file_uploader("📄 Upload a PDF document", type=["pdf"])
+    if st.button("🔍 Classify Document"):
+        with st.spinner("Analyzing your document... 🧠"):
+            text = extract_text(uploaded_file)
+            if len(text) < 20:
+                st.error("Document text is too short or unreadable. Try a clearer file.")
+            else:
+                query_vec = model.encode([text])
+                distances, indices = index.search(query_vec, 1)
+                predicted_type = doc_types[indices[0][0]]
+                confidence = round((1 - distances[0][0]) * 100, 2)
 
-if uploaded_file:
-    with st.spinner("🔍 Analyzing document..."):
-        text = extract_text_from_pdf(uploaded_file)
-        label, score = classify_document(text)
-        fields = extract_fields(text)
+                st.success(f" Document Type: **{predicted_type}**")
+                st.metric("Confidence", f"{confidence} %")
 
-    st.success("Document processed successfully!")
+                if confidence > 80:
+                    st.balloons()
+                elif confidence > 60:
+                    st.progress(70)
+                else:
+                    st.warning("⚠️ Confidence is low — document may be unclear or mixed.")
 
-    # -------------------------------
-    # Display Results
-    # -------------------------------
-    col1, col2 = st.columns([1, 1])
-
-    with col1:
-        st.subheader("📘 Classification Result")
-        st.markdown(f"**Predicted Type:** `{label}`")
-        st.markdown(f"**Confidence (lower = better):** `{round(score, 2)}`")
-
-    with col2:
-        st.subheader("📋 Extracted Key Fields")
-        for k, v in fields.items():
-            st.markdown(f"**{k}:** {v}")
-
-    # -------------------------------
-    # Text Summary Preview
-    # -------------------------------
-    with st.expander("View Extracted Text"):
-        st.text_area("Document Text", text[:2000] + "...", height=200)
+                with st.expander("📄 View Extracted Text"):
+                    st.text_area("Extracted Content", text[:2000])
 
 else:
-    st.info("⬆️ Please upload a PDF file to get started.")
+    st.info("👆 Upload a file above to get started.")
 
-# -------------------------------
-# Footer
-# -------------------------------
-st.markdown("""
-<hr>
-<p style='text-align:center;color:gray;font-size:13px;'>
-Built using Streamlit & SentenceTransformers | Agentic AI 2025
-</p>
-""", unsafe_allow_html=True)
+# -----------------------------
+# SIDEBAR INFO
+# -----------------------------
+st.sidebar.header("About This App")
+st.sidebar.write("""
+This **AI-powered Document Classifier** can detect whether a file is:
+- 🧾 Claim Form  
+- 🔍 Inspection Report  
+- 💰 Invoice  
+- 📘 Policy Document  
+- 🗂️ Others  
+
+Built using:
+- `Sentence Transformers`
+- `FAISS`
+- `Streamlit`
+- `pdfplumber` + `OCR`
+""")
+
+st.sidebar.markdown("---")
