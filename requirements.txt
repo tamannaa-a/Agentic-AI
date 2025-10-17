@@ -1,6 +1,6 @@
 streamlit
 pdfplumber
 sentence-transformers==2.2.2
-faiss-cpu
+faiss-cpu --extra-index-url https://download.pytorch.org/whl/cpu
 pillow
 numpy
