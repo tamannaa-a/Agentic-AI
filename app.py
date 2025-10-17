@@ -6,10 +6,11 @@ import numpy as np
 import re
 from io import BytesIO
 from PIL import Image
+import pytesseract
 import matplotlib.pyplot as plt
 
 # -------------------------------
-# Streamlit Page Config
+# 🌟 Streamlit Page Config
 # -------------------------------
 st.set_page_config(
     page_title="Agentic AI - Smart Document Classifier",
@@ -18,23 +19,13 @@ st.set_page_config(
 )
 
 # -------------------------------
-# Custom Styling
+# 🎨 Custom Styling
 # -------------------------------
 st.markdown("""
     <style>
-        .stApp {
-            background-color: #F9FAFB;
-        }
-        h1 {
-            text-align: center;
-            color: #2F80ED;
-        }
-        .desc {
-            text-align: center;
-            color: #6C757D;
-            font-size: 16px;
-            margin-bottom: 30px;
-        }
+        .stApp { background-color: #F9FAFB; }
+        h1 { text-align: center; color: #2F80ED; }
+        .desc { text-align: center; color: #6C757D; font-size: 16px; margin-bottom: 30px; }
         .result-box {
             background-color: #E3F2FD;
             padding: 15px;
@@ -43,22 +34,19 @@ st.markdown("""
             font-size: 18px;
         }
         .footer {
-            text-align: center;
-            color: gray;
-            font-size: 13px;
-            margin-top: 40px;
+            text-align: center; color: gray; font-size: 13px; margin-top: 40px;
         }
     </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------
-# Title Section
+# 🧠 Title Section
 # -------------------------------
 st.markdown("<h1>🤖 Agentic AI - Smart Document Classifier</h1>", unsafe_allow_html=True)
 st.markdown("<p class='desc'>Upload any insurance document — Invoice, Claim Form, or Inspection Report — and let AI classify it automatically.</p>", unsafe_allow_html=True)
 
 # -------------------------------
-# Load Embedding Model
+# 🔹 Load Embedding Model
 # -------------------------------
 @st.cache_resource
 def load_model():
@@ -67,7 +55,7 @@ def load_model():
 model = load_model()
 
 # -------------------------------
-# Predefined Categories
+# 🔹 Predefined Categories
 # -------------------------------
 categories = {
     "Invoice": [
@@ -84,23 +72,33 @@ categories = {
 }
 
 # -------------------------------
-# Extract Text Function
+# 📄 Extract Text (with OCR fallback)
 # -------------------------------
 def extract_text_from_pdf(file):
     text = ""
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages:
-            text += page.extract_text() or ""
+            page_text = page.extract_text()
+            if not page_text:  # If no text, try OCR
+                img = page.to_image(resolution=200).original
+                page_text = pytesseract.image_to_string(img)
+            text += page_text or ""
     return text.strip()
 
 # -------------------------------
-# Improved Classification
+# 🤖 Improved Classification
 # -------------------------------
 def classify_document(text):
-    chunks = [text[i:i+500] for i in range(0, len(text), 500)]
-    chunk_embeddings = model.encode(chunks, convert_to_numpy=True)
+    if not text or len(text.strip()) == 0:
+        return "Unreadable Document", 0.0, {}
 
+    chunks = [text[i:i+500] for i in range(0, len(text), 500)]
+    if not chunks:
+        return "Unreadable Document", 0.0, {}
+
+    chunk_embeddings = model.encode(chunks, convert_to_numpy=True)
     category_scores = {}
+
     for cat, keywords in categories.items():
         cat_embedding = model.encode([" ".join(keywords)], convert_to_numpy=True)
         similarities = np.dot(chunk_embeddings, cat_embedding.T) / (
@@ -113,7 +111,7 @@ def classify_document(text):
     return best_label, confidence, category_scores
 
 # -------------------------------
-# Extract Important Fields
+# 🔍 Extract Important Fields
 # -------------------------------
 def extract_fields(text):
     fields = {}
@@ -127,7 +125,7 @@ def extract_fields(text):
     return fields
 
 # -------------------------------
-# File Upload
+# 📤 File Upload
 # -------------------------------
 uploaded_file = st.file_uploader("📁 Upload a PDF document", type=["pdf"])
 
@@ -140,44 +138,45 @@ if uploaded_file:
     st.success("✅ Document analyzed successfully!")
 
     # -------------------------------
-    # Show Results
+    # 🧾 Show Results
     # -------------------------------
-    st.markdown(f"<div class='result-box'><b>Predicted Document Type:</b> {label} <br> <b>Confidence:</b> {confidence}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='result-box'><b>Predicted Document Type:</b> {label}<br><b>Confidence:</b> {confidence}</div>", unsafe_allow_html=True)
 
     # -------------------------------
-    # Show Similarity Chart
+    # 📊 Confidence Chart
     # -------------------------------
-    st.subheader("📈 Category Confidence Overview")
-    fig, ax = plt.subplots(figsize=(6, 3))
-    ax.barh(list(scores.keys()), list(scores.values()))
-    ax.set_xlabel("Similarity Score")
-    ax.set_title("Category-wise Confidence")
-    st.pyplot(fig)
+    if scores:
+        st.subheader("📈 Category Confidence Overview")
+        fig, ax = plt.subplots(figsize=(6, 3))
+        ax.barh(list(scores.keys()), list(scores.values()), color=["#4CAF50", "#2196F3", "#FF9800"])
+        ax.set_xlabel("Similarity Score")
+        ax.set_title("Category Confidence Levels")
+        st.pyplot(fig)
 
     # -------------------------------
-    # Show Extracted Fields
+    # 🗂️ Extracted Info
     # -------------------------------
-    st.subheader("📋 Key Extracted Fields")
+    st.subheader("📋 Extracted Key Fields")
     col1, col2, col3 = st.columns(3)
     col1.metric("📅 Date", fields["Date"])
     col2.metric("💰 Amount", fields["Amount"])
     col3.metric("🧍 Name", fields["Name"])
 
     # -------------------------------
-    # View Extracted Text
+    # 🧠 Text Preview
     # -------------------------------
-    with st.expander("📜 View Extracted Text Preview"):
+    with st.expander("📜 View Extracted Text"):
         st.text_area("Extracted Text", text[:2000] + "...", height=250)
 
 else:
     st.info("⬆️ Please upload a PDF to begin analysis.")
 
 # -------------------------------
-# Footer
+# 💬 Footer
 # -------------------------------
 st.markdown("""
 <hr>
 <p class='footer'>
-Built using Streamlit & SentenceTransformers | Agentic AI © 2025
+Built with ❤️ using Streamlit & SentenceTransformers | Agentic AI © 2025
 </p>
 """, unsafe_allow_html=True)
