@@ -6,16 +6,56 @@ import numpy as np
 import re
 from io import BytesIO
 from PIL import Image
+import matplotlib.pyplot as plt
 
 # -------------------------------
-# App Title and Description
+# Streamlit Page Config
 # -------------------------------
-st.set_page_config(page_title="Agentic AI - Document Classifier", page_icon="🤖", layout="wide")
+st.set_page_config(
+    page_title="Agentic AI - Smart Document Classifier",
+    page_icon="🤖",
+    layout="wide"
+)
 
+# -------------------------------
+# Custom Styling
+# -------------------------------
 st.markdown("""
-    <h1 style='text-align:center;color:#2F80ED;'>🤖 Agentic AI - Smart Document Classifier</h1>
-    <p style='text-align:center;color:gray;'>Upload any insurance document (invoice, claim form, inspection report) and let AI auto-classify it!</p>
+    <style>
+        .stApp {
+            background-color: #F9FAFB;
+        }
+        h1 {
+            text-align: center;
+            color: #2F80ED;
+        }
+        .desc {
+            text-align: center;
+            color: #6C757D;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        .result-box {
+            background-color: #E3F2FD;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+        }
+        .footer {
+            text-align: center;
+            color: gray;
+            font-size: 13px;
+            margin-top: 40px;
+        }
+    </style>
 """, unsafe_allow_html=True)
+
+# -------------------------------
+# Title Section
+# -------------------------------
+st.markdown("<h1>🤖 Agentic AI - Smart Document Classifier</h1>", unsafe_allow_html=True)
+st.markdown("<p class='desc'>Upload any insurance document — Invoice, Claim Form, or Inspection Report — and let AI classify it automatically.</p>", unsafe_allow_html=True)
 
 # -------------------------------
 # Load Embedding Model
@@ -30,39 +70,56 @@ model = load_model()
 # Predefined Categories
 # -------------------------------
 categories = {
-    "Invoice": ["invoice", "amount due", "total payable", "bill no", "payment terms"],
-    "Claim Form": ["claim number", "policy holder", "insurance claim", "incident", "policy no"],
-    "Inspection Report": ["vehicle inspection", "report", "assessment", "damages", "inspector"],
+    "Invoice": [
+        "invoice", "bill", "amount due", "subtotal", "tax", "payment terms", "billed to"
+    ],
+    "Claim Form": [
+        "insurance claim", "policy number", "incident details", "claim type",
+        "insured name", "loss description", "signature of claimant"
+    ],
+    "Inspection Report": [
+        "inspection report", "vehicle assessment", "inspection date",
+        "damage description", "inspector name", "findings", "recommendations"
+    ],
 }
 
 # -------------------------------
-# Utility Functions
+# Extract Text Function
 # -------------------------------
 def extract_text_from_pdf(file):
     text = ""
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages:
             text += page.extract_text() or ""
-    return text
+    return text.strip()
 
+# -------------------------------
+# Improved Classification
+# -------------------------------
 def classify_document(text):
-    # Convert category samples to embeddings
-    category_names = list(categories.keys())
-    sample_sentences = [" ".join(categories[c]) for c in category_names]
-    sample_embeddings = model.encode(sample_sentences, convert_to_numpy=True)
-    query_embedding = model.encode([text], convert_to_numpy=True)
+    chunks = [text[i:i+500] for i in range(0, len(text), 500)]
+    chunk_embeddings = model.encode(chunks, convert_to_numpy=True)
 
-    # Use FAISS for similarity
-    index = faiss.IndexFlatL2(sample_embeddings.shape[1])
-    index.add(sample_embeddings)
-    distances, indices = index.search(query_embedding, 1)
-    return category_names[indices[0][0]], distances[0][0]
+    category_scores = {}
+    for cat, keywords in categories.items():
+        cat_embedding = model.encode([" ".join(keywords)], convert_to_numpy=True)
+        similarities = np.dot(chunk_embeddings, cat_embedding.T) / (
+            np.linalg.norm(chunk_embeddings, axis=1, keepdims=True) * np.linalg.norm(cat_embedding)
+        )
+        category_scores[cat] = float(np.mean(similarities))
 
+    best_label = max(category_scores, key=category_scores.get)
+    confidence = round(category_scores[best_label], 3)
+    return best_label, confidence, category_scores
+
+# -------------------------------
+# Extract Important Fields
+# -------------------------------
 def extract_fields(text):
     fields = {}
     date_match = re.search(r"\b\d{2,4}[/-]\d{2}[/-]\d{2,4}\b", text)
     amount_match = re.search(r"[\$₹]\s?\d+[,.]?\d*", text)
-    name_match = re.search(r"(?i)(?:Name|Customer|Client)[:\-]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)", text)
+    name_match = re.search(r"(?i)(?:Name|Customer|Client|Insured)[:\-]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)", text)
 
     fields["Date"] = date_match.group(0) if date_match else "Not found"
     fields["Amount"] = amount_match.group(0) if amount_match else "Not found"
@@ -70,48 +127,57 @@ def extract_fields(text):
     return fields
 
 # -------------------------------
-# Upload Section
+# File Upload
 # -------------------------------
-uploaded_file = st.file_uploader("📄 Upload a PDF document", type=["pdf"])
+uploaded_file = st.file_uploader("📁 Upload a PDF document", type=["pdf"])
 
 if uploaded_file:
-    with st.spinner("🔍 Analyzing document..."):
+    with st.spinner("🔍 Analyzing your document... Please wait"):
         text = extract_text_from_pdf(uploaded_file)
-        label, score = classify_document(text)
+        label, confidence, scores = classify_document(text)
         fields = extract_fields(text)
 
-    st.success("✅ Document processed successfully!")
+    st.success("✅ Document analyzed successfully!")
 
     # -------------------------------
-    # 🔹 Display Results
+    # Show Results
     # -------------------------------
-    col1, col2 = st.columns([1, 1])
-
-    with col1:
-        st.subheader("📘 Classification Result")
-        st.markdown(f"**Predicted Type:** `{label}`")
-        st.markdown(f"**Confidence (lower = better):** `{round(score, 2)}`")
-
-    with col2:
-        st.subheader("📋 Extracted Key Fields")
-        for k, v in fields.items():
-            st.markdown(f"**{k}:** {v}")
+    st.markdown(f"<div class='result-box'><b>Predicted Document Type:</b> {label} <br> <b>Confidence:</b> {confidence}</div>", unsafe_allow_html=True)
 
     # -------------------------------
-    # Text Summary Preview
+    # Show Similarity Chart
     # -------------------------------
-    with st.expander("View Extracted Text"):
-        st.text_area("Document Text", text[:2000] + "...", height=200)
+    st.subheader("📈 Category Confidence Overview")
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.barh(list(scores.keys()), list(scores.values()))
+    ax.set_xlabel("Similarity Score")
+    ax.set_title("Category-wise Confidence")
+    st.pyplot(fig)
+
+    # -------------------------------
+    # Show Extracted Fields
+    # -------------------------------
+    st.subheader("📋 Key Extracted Fields")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("📅 Date", fields["Date"])
+    col2.metric("💰 Amount", fields["Amount"])
+    col3.metric("🧍 Name", fields["Name"])
+
+    # -------------------------------
+    # View Extracted Text
+    # -------------------------------
+    with st.expander("📜 View Extracted Text Preview"):
+        st.text_area("Extracted Text", text[:2000] + "...", height=250)
 
 else:
-    st.info("⬆️ Please upload a PDF file to get started.")
+    st.info("⬆️ Please upload a PDF to begin analysis.")
 
 # -------------------------------
 # Footer
 # -------------------------------
 st.markdown("""
 <hr>
-<p style='text-align:center;color:gray;font-size:13px;'>
-Built using Streamlit & SentenceTransformers | Agentic AI 2025
+<p class='footer'>
+Built using Streamlit & SentenceTransformers | Agentic AI © 2025
 </p>
 """, unsafe_allow_html=True)
