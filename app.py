@@ -100,7 +100,7 @@ if uploaded_file:
     # -------------------------------
     # Text Summary Preview
     # -------------------------------
-    with st.expander("🧠 View Extracted Text"):
+    with st.expander("View Extracted Text"):
         st.text_area("Document Text", text[:2000] + "...", height=200)
 
 else:
@@ -112,6 +112,6 @@ else:
 st.markdown("""
 <hr>
 <p style='text-align:center;color:gray;font-size:13px;'>
-Built with ❤️ using Streamlit & SentenceTransformers | Agentic AI 2025
+Built using Streamlit & SentenceTransformers | Agentic AI 2025
 </p>
 """, unsafe_allow_html=True)
