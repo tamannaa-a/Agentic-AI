@@ -1,0 +1,6 @@
+streamlit
+pdfplumber
+sentence-transformers==2.2.2
+faiss-cpu
+pillow
+numpy
