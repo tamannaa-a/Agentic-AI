@@ -1,5 +1,4 @@
-fastapi
-uvicorn
-pdfplumber
-scikit-learn
-joblib
+scikit-learn==1.6.1
+pandas
+numpy
+streamlit
