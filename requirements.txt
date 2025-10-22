@@ -1,8 +1,2 @@
-fastapi
-uvicorn
-pdfplumber
-scikit-learn==1.6.1
-pandas
-numpy
-joblib
-python-multipart
+streamlit
+requests
