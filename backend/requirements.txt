@@ -8,4 +8,5 @@ spacy==3.5.3
 pdfplumber==0.7.5
 python-dotenv==1.0.0
 requests==2.31.0
-openai==1.9.2
+numpy==1.26.0
+pandas==2.1.2
