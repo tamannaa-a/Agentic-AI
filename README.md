@@ -1,32 +1,30 @@
-# Intelligent Claims Orchestrator (Local)
+# Intelligent Claims Orchestrator — Industry-ready local demo
 
-A full-stack local project: multi-agent claims orchestrator (Extractor → Validator → Fraud Analyzer → Explainer) + React frontend with a D3 decision graph.
+## Overview
+A production-style, offline-capable claims orchestration demo:
+- Backend: FastAPI agents (Extractor, Validator, Fraud Analyzer, Explainer)
+- Frontend: React + Vite + Tailwind + Recharts + D3 for a professional dashboard
+- Fully offline — no API keys required
 
-## Quick start (Linux / macOS)
-
+## Run locally (Windows cmd)
 1. Backend
    cd backend
-   python3 -m venv venv
-   source venv/bin/activate
+   python -m venv venv
+   venv\Scripts\activate.bat
+   python -m pip install --upgrade pip
    pip install -r requirements.txt
-   python -m spacy download en_core_web_sm
-   python train_fraud_model.py
-   uvicorn main:app --reload --port 8000
+   python app/train_fraud_model.py
+   python -m uvicorn app.main:app --reload --port 8000
 
 2. Frontend (new terminal)
    cd frontend
    npm install
    npm run dev
+   Open http://localhost:5173
 
-Open http://localhost:5173 and test.
+## Docker
+docker-compose up --build
 
-## Push to GitHub
-git init
-git add .
-git commit -m "Initial commit"
-# create repo on GitHub, then:
-git remote add origin https://github.com/<your-username>/intelligent-claims-orchestrator.git
-git branch -M main
-git push -u origin main
-
-Download ZIP from GitHub: Repo → Code → Download ZIP
+## Notes
+- Model is synthetic (train_fraud_model.py). Replace with real training for production.
+- For production: add auth, TLS, logging aggregation, persistent DB, CI/CD.
