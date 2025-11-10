@@ -25,9 +25,11 @@ def extract_text_from_pdf(path: str) -> str:
 
 def simple_entity_extraction(text: str) -> Dict:
     res = {}
+    # Claim ID
     m = re.search(r"(CLM|Claim)[-_ ]?(\d{3,})", text, re.IGNORECASE)
     if m:
         res['claim_id'] = m.group(0)
+    # amount
     m2 = re.search(r"\b(?:Rs\.?|INR|USD|EUR|£|\$) ?([0-9,]+(?:\.[0-9]{1,2})?)", text)
     if m2:
         amt = m2.group(1).replace(',', '')
@@ -35,10 +37,12 @@ def simple_entity_extraction(text: str) -> Dict:
             res['claim_amount'] = float(amt)
         except:
             pass
+    # dates
     m3 = re.search(r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", text)
     if m3:
         res['date'] = m3.group(0)
 
+    # keywords
     keywords = []
     for kw in ['fraud', 'accident', 'collision', 'hail', 'theft', 'fire', 'flood']:
         if kw.lower() in text.lower():
