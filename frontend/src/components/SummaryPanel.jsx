@@ -1,28 +1,33 @@
 import React from "react"
-import FraudGauge from "./FraudGauge"
+import FraudGaugeEcharts from "./FraudGaugeEcharts"
 
-export default function SummaryPanel({ data }) {
-  const { extracted, validation, fraud, explanation } = data
-
+export default function SummaryPanel({ data }){
+  const { extracted, validation, fraud, explanation } = data || {}
   return (
-    <div className="panel space-y-4">
-      <h2 className="text-xl font-semibold text-gray-800">Claim Analysis Summary</h2>
-      <div className="grid md:grid-cols-2 gap-6">
-        <div>
-          <h3 className="font-medium text-gray-700 mb-1">Extracted Entities</h3>
-          <pre className="json-box">{JSON.stringify(extracted, null, 2)}</pre>
+    <div className="card p-6 mt-6">
+      <h3 className="text-xl font-semibold mb-3">Claim Analysis Summary</h3>
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h4 className="small">Extracted Entities</h4>
+              <div className="json-box mt-2">{JSON.stringify(extracted,null,2)}</div>
+            </div>
+            <div>
+              <h4 className="small">Policy Validation</h4>
+              <div className="json-box mt-2">{JSON.stringify(validation,null,2)}</div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <h4 className="small">System Explanation</h4>
+            <div className="bg-black/20 p-3 rounded mt-2">{explanation?.explanation}</div>
+          </div>
         </div>
+
         <div>
-          <h3 className="font-medium text-gray-700 mb-1">Policy Validation</h3>
-          <pre className="json-box">{JSON.stringify(validation, null, 2)}</pre>
+          <FraudGaugeEcharts score={fraud?.score || 0} />
         </div>
-      </div>
-      <FraudGauge score={fraud.score} />
-      <div>
-        <h3 className="font-medium text-gray-700 mb-1">System Explanation</h3>
-        <pre className="bg-blue-50 border border-blue-200 text-gray-800 text-sm p-4 rounded-lg overflow-auto">
-          {explanation.explanation}
-        </pre>
       </div>
     </div>
   )
