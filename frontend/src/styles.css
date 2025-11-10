@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900 font-sans;
+}
+.json-box {
+  background: #f0f0f0;
+  padding: 8px;
+  border-radius: 4px;
+  overflow: auto;
+  max-height: 260px;
+}
+.panel {
+  background: white; padding: 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+}
+button { background: #0b5fff; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
