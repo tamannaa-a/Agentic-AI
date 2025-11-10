@@ -1,16 +1,15 @@
-version: '3.8'
+version: "3.8"
 services:
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/uploads:/app/uploads
-    environment:
-      - OPENAI_API_KEY=
+      - ./backend/app/uploads:/app/app/uploads
+      - ./backend/app/models:/app/app/models
   frontend:
     build: ./frontend
     ports:
-      - "5173:80"
+      - "5173:5173"
     depends_on:
       - backend
