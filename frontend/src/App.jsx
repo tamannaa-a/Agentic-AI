@@ -1,24 +1,18 @@
 import React, { useState } from "react"
 import Navbar from "./components/Navbar"
-import UploadCard from "./components/UploadCard"
-import SummaryPanel from "./components/SummaryPanel"
-import FlowGraph from "./components/FlowGraph"
+import NeonTabs from "./components/NeonTabs"
+import './styles.css'
 
-export default function App() {
+export default function App(){
   const [result, setResult] = useState(null)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#071025] font-sans">
       <Navbar />
-      <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-        <UploadCard onResult={setResult} />
-        {result && (
-          <>
-            <SummaryPanel data={result} />
-            <FlowGraph graph={result.graph} />
-          </>
-        )}
-      </div>
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <NeonTabs result={result} setResult={setResult} />
+      </main>
+      <footer className="text-center text-xs text-slate-400 pb-6">Intelligent Claims Orchestrator — Demo (Offline)</footer>
     </div>
   )
 }
