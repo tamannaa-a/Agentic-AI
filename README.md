@@ -1,30 +1,31 @@
-# Intelligent Claims Orchestrator — Industry-ready local demo
+# 🚀 ClaimAxis — Intelligent Claims Orchestrator
 
-## Overview
-A production-style, offline-capable claims orchestration demo:
-- Backend: FastAPI agents (Extractor, Validator, Fraud Analyzer, Explainer)
-- Frontend: React + Vite + Tailwind + Recharts + D3 for a professional dashboard
-- Fully offline — no API keys required
+**ClaimAxis** is an **AI-powered insurance claim intelligence platform** built using **FastAPI, React (Vite), TailwindCSS, and Machine Learning**.  
+It automates claim analysis, fraud detection, policy validation, and provides interactive analytics — making it an enterprise-grade **claims intelligence hub**.
 
-## Run locally (Windows cmd)
-1. Backend
-   cd backend
-   python -m venv venv
-   venv\Scripts\activate.bat
-   python -m pip install --upgrade pip
-   pip install -r requirements.txt
-   python app/train_fraud_model.py
-   python -m uvicorn app.main:app --reload --port 8000
+---
 
-2. Frontend (new terminal)
-   cd frontend
-   npm install
-   npm run dev
-   Open http://localhost:5173
+## 🌐 Live Demo (Localhost)
 
-## Docker
-docker-compose up --build
+| Service | Default Port | URL |
+|----------|---------------|------|
+| **Backend (FastAPI)** | 8000 | [http://127.0.0.1:8000](http://127.0.0.1:8000) |
+| **Frontend (Vite + React)** | 5173 | [http://localhost:5173](http://localhost:5173) |
 
-## Notes
-- Model is synthetic (train_fraud_model.py). Replace with real training for production.
-- For production: add auth, TLS, logging aggregation, persistent DB, CI/CD.
+---
+
+## 🧠 Overview
+
+ClaimAxis automates the entire **claims evaluation workflow**:
+
+1. **Ingests** free-form claim text or PDF files.  
+2. **Extracts** key entities (claim amount, keywords, prior claim history).  
+3. **Validates** policy coverages.  
+4. **Analyzes** risk using an ML model + rule-based heuristics.  
+5. **Generates** an AI-driven explanation and fraud contribution breakdown.  
+6. **Displays** everything on a dark-neon, industry-grade interactive dashboard.
+
+---
+
+## 🏗️ Project Architecture
+
